@@ -1,0 +1,66 @@
+﻿@page "/main"
+@using AppCommerce.Entities
+@using AppCommerce.Infrastructure.Data
+@using Microsoft.EntityFrameworkCore
+@inject AppDbContext Db
+
+<h3>Products</h3>
+
+@if (products == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    foreach (var product in products)
+    {
+        <div>
+            <h4>@product.Name</h4>
+            <p>@product.Price</p>
+            <button @onclick="() => AddToCart(product.Id)">Add to Cart</button>
+        </div>
+    }
+}
+
+<h3>Cart</h3>
+
+@if (cartItems != null)
+{
+    foreach (var item in cartItems)
+    {
+        <div>
+            @item.Product.Name - Qty: @item.Quantity
+        </div>
+    }
+}
+
+@code {
+    List<Product>? products;
+    List<CartItem>? cartItems;
+
+    protected override void OnInitialized()
+    {
+        products = Db.Products.ToList();
+        cartItems = Db.CartItems
+            .Include(x => x.Product)
+            .ToList();
+    }
+
+    void AddToCart(Guid productId)
+    {
+        var existing = Db.CartItems.FirstOrDefault(x => x.ProductId == productId);
+
+        if (existing != null)
+            existing.Quantity++;
+        else
+            Db.CartItems.Add(new CartItem
+            {
+                Id = Guid.NewGuid(),
+                ProductId = productId,
+                Quantity = 1
+            });
+
+        Db.SaveChanges();
+        cartItems = Db.CartItems.Include(x => x.Product).ToList();
+    }
+}
